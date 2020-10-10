@@ -40,7 +40,7 @@ services:
 
     nginx:
         #build: http://git.c
-        image: devops/nginx:1.19.3
+        image: registry.miczone.asia/devops/nginx:1.19.3
         ports:
             - 8080:8080 # dont need to expose here since traefik will do forwarding
         depends_on:
