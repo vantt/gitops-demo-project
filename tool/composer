@@ -4,7 +4,7 @@ DOCKER_IMAGE=devops/composer:1.10.1
 
 source "$(dirname "$(realpath "$0")")"/rundocker
 
-composer () {
+composer2 () {
     CACHE_FOLDER=~/.composer
 
     if [[ ! -d $CACHE_FOLDER ]]; then
@@ -14,7 +14,7 @@ composer () {
     extra_volumes="--volume $CACHE_FOLDER:/composer_cache" rundocker  "$@" --verbose --prefer-source --ignore-platform-reqs
 }
 
-composer2 () {
+composer () {
     CACHE_FOLDER=~/.composer
 
     if [[ ! -d $CACHE_FOLDER ]]; then
