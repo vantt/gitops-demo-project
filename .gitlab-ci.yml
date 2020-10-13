@@ -1,4 +1,4 @@
-image: laradock/workspace:7.4
+image: laradock/workspace:latest-7.4
 
 cache: &global_cache
   key: ${CI_COMMIT_REF_SLUG}
