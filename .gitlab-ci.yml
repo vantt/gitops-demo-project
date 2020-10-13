@@ -6,6 +6,7 @@ stages:
   - security
 
 list-files:
+  stage: preparation
   script:
     - pwd
     - ls -a
