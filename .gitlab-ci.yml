@@ -7,4 +7,4 @@ list-files:
 
 phpcs:
   script:
-    - phpcs --standard=Framgia app/
+    - phpcs --standard=Framgia code/
