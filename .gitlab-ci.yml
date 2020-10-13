@@ -1,6 +1,8 @@
 image: laradock/workspace:latest-7.4
 
 cache: &global_cache
+  # https://docs.gitlab.com/ee/ci/caching/#sharing-caches-across-the-same-branch
+  # jobs of each branch always use the same cache
   key: ${CI_COMMIT_REF_SLUG}
   paths:
     - code/node_modules/
