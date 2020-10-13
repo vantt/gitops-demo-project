@@ -1,0 +1,10 @@
+image: framgia/laravel-workspace
+
+list-files:
+  script:
+    - pwd
+    - ls -a
+
+phpcs:
+  script:
+    - phpcs --standard=Framgia app/
