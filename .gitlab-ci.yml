@@ -1,10 +1,71 @@
 image: framgia/laravel-workspace
 
+stages:
+  - preparation
+  - testing
+  - security
+
 list-files:
   script:
     - pwd
     - ls -a
 
-phpcs:
+composer:
+  stage: preparation
   script:
-    - phpcs --standard=Framgia code/
+    - php -v
+    - composer install --prefer-dist --no-ansi --no-interaction --no-progress --no-scripts
+  artifacts:
+    paths:
+      - vendor/
+      - .env
+    expire_in: 1 days
+    when: always
+  cache:
+    paths:
+      - vendor/
+
+phpunit:
+  stage: testing
+  dependencies:
+    - composer
+  script:
+    - php -v
+    #- sudo cp /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.bak
+    - ./vendor/phpunit/phpunit/phpunit --version
+    - php -d short_open_tag=off ./vendor/phpunit/phpunit/phpunit -v --colors=never --stderr
+    #- sudo cp /usr/local/etc/php/conf.d/docker-php-ext-xdebug.bak /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+  artifacts:
+    paths:
+      - ./storage/logs # for debugging
+    expire_in: 1 days
+    when: on_failure
+
+codestyle:
+  stage: testing
+  image: lorisleiva/laravel-docker
+  script:
+    - phpcs --extensions=php code
+  dependencies: []
+
+copypaste:
+  stage: testing
+  script:
+    - test -f phpcpd.phar || curl -L https://phar.phpunit.de/phpcpd.phar -o phpcpd.phar
+    - php phpcpd.phar app/ --min-lines=50
+  dependencies: []
+  cache:
+    paths:
+      - phpcpd.phar
+
+sensiolabs:
+  stage: security
+  script:
+    - test -d security-checker || git clone https://github.com/sensiolabs/security-checker.git
+    - cd security-checker
+    - composer install
+    - php security-checker security:check ../composer.lock
+  dependencies: []
+  cache:
+    paths:
+      - security-checker/    
