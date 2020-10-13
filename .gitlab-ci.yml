@@ -35,13 +35,13 @@ unit_test:
     - php -v
     #- sudo cp /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.bak
     - cd code
-    - ./vendor/phpunit/phpunit/phpunit --version
-    - ./vendor/phpunit/phpunit/phpunit 
+    - ./bin/phpunit --version
+    - ./bin/phpunit
     #- sudo cp /usr/local/etc/php/conf.d/docker-php-ext-xdebug.bak /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
 codestyle:
   stage: testing
-  image: lorisleiva/laravel-docker
+  #image: lorisleiva/laravel-docker
   script:
     - phpcs --extensions=php code
   dependencies: []
