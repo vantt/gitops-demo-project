@@ -1,5 +1,12 @@
 image: framgia/laravel-workspace
 
+cache: &global_cache
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - code/node_modules/
+    - code/vendor/
+  #policy: pull-push
+
 stages:
   - preparation
   - testing
@@ -15,17 +22,11 @@ composer:
   stage: preparation
   script:
     - php -v
-    - composer install --prefer-dist --no-ansi --no-interaction --no-progress --no-scripts
-  artifacts:
-    paths:
-      - vendor/
-      - .env
-    expire_in: 1 days
-    when: always
+    - cd code && composer install --prefer-dist --no-ansi --no-interaction --no-progress --no-scripts
   cache:
-    paths:
-      - vendor/
-
+    # inherit all global cache settings
+    <<: *global_cache
+    
 unit_test:
   stage: testing
   dependencies:
@@ -33,14 +34,10 @@ unit_test:
   script:
     - php -v
     #- sudo cp /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.bak
+    - cd code
     - ./vendor/phpunit/phpunit/phpunit --version
     - ./vendor/phpunit/phpunit/phpunit 
     #- sudo cp /usr/local/etc/php/conf.d/docker-php-ext-xdebug.bak /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
-  artifacts:
-    paths:
-      - ./storage/logs # for debugging
-    expire_in: 1 days
-    when: on_failure
 
 codestyle:
   stage: testing
@@ -53,7 +50,7 @@ copypaste:
   stage: testing
   script:
     - test -f phpcpd.phar || curl -L https://phar.phpunit.de/phpcpd.phar -o phpcpd.phar
-    - php phpcpd.phar app/ --min-lines=50
+    - php phpcpd.phar code/ --min-lines=50
   dependencies: []
   cache:
     paths:
@@ -65,7 +62,7 @@ sensiolabs:
     - test -d security-checker || git clone https://github.com/sensiolabs/security-checker.git
     - cd security-checker
     - composer install
-    - php security-checker security:check ../composer.lock
+    - php security-checker security:check ../code/composer.lock
   dependencies: []
   cache:
     paths:
@@ -87,3 +84,12 @@ sensiolabs:
 #   when: manual
 #   only:
 #     - master      
+
+# docker build:
+#   script: docker build -t my-image:$CI_COMMIT_REF_SLUG .
+# only:
+#     refs:
+#       - merge_requests
+#     changes:
+#       - Dockerfile
+#       - service-one/**/*
