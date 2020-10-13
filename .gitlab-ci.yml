@@ -39,12 +39,12 @@ unit_test:
     - ./bin/phpunit
     #- sudo cp /usr/local/etc/php/conf.d/docker-php-ext-xdebug.bak /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
-codestyle:
-  stage: testing
-  #image: lorisleiva/laravel-docker
-  script:
-    - phpcs --extensions=php code
-  dependencies: []
+# codestyle:
+#   stage: testing
+#   #image: lorisleiva/laravel-docker
+#   script:
+#     - phpcs --extensions=php code
+#   dependencies: []
 
 copypaste:
   stage: testing
