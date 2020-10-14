@@ -26,6 +26,7 @@ build_image:
     - docker tag demoapp:latest $CI_REGISTRY/devops/demoapp:$CI_COMMIT_REF_NAME
     - docker push $CI_REGISTRY/devops/demoapp:$TAG
     - docker push $CI_REGISTRY/devops/demoapp:$CI_COMMIT_REF_NAME
+    - echo "Sucessful push: $CI_REGISTRY/devops/demoapp:$TAG $CI_REGISTRY/devops/demoapp:$CI_COMMIT_REF_NAME "
 
 
 list-files:

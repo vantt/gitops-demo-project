@@ -205,7 +205,9 @@ sensiolabs:
 ```
 
 
-# Gitlab Pull from Private Docker Registry
+# Prepare Environment Variables helps Gitlab working with private Registry
+### Create DOCKER_AUTH_CONFIG for private image
+
 https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#define-an-image-from-a-private-container-registry
 
 Create an environment vaairriable ưith the name: *DOCKER_AUTH_CONFIG*
@@ -232,3 +234,8 @@ Create the Docker JSON configuration content as follows
     }
 }
 ```
+
+## Create enviroments for build and push to docker
+CI_REGISTRY: your registry url (include port)
+CI_REGISTRY_USERNAME: your registry login username
+CI_REGISTRY_PASSWORD: your registry login password
