@@ -82,10 +82,11 @@ sensiolabs:
 
 build_image:
   stage: package
+  image: gitlab/dind # use gitlab dind to have docker command
   script:
     - cd build/ci && docker build -t registry.miczone.asia/devops/demoapp:1.1.1 .
     - docker push registry.miczone.asia/devops/demoapp:1.1.1 
-    
+
 # deploy_production:
 #   stage: deploy
 #   script:
