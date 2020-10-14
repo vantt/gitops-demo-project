@@ -13,12 +13,14 @@ stages:
   - preparation
   - testing
   - security
+  - package
 
 list-files:
   stage: preparation
   image: registry.miczone.asia/devops/phpcli:7.4.11
   script:
     - pwd
+    - echo $DOCKER_AUTH_CONFIG
     - ls -a
 
 composer:
@@ -29,7 +31,13 @@ composer:
   cache:
     # inherit all global cache settings
     <<: *global_cache
-    
+
+  artifacts:
+      untracked: false
+      expire_in: 30 days     
+      paths:
+          - code
+
 unit_test:
   stage: testing
   dependencies:
@@ -69,8 +77,15 @@ sensiolabs:
   dependencies: []
   cache:
     paths:
-      - security-checker/    
+      - security-checker/
+  
 
+build_image:
+  stage: package
+  script:
+    - cd build/ci && docker build -t registry.miczone.asia/devops/demoapp:1.1.1 .
+    - docker push registry.miczone.asia/devops/demoapp:1.1.1 
+    
 # deploy_production:
 #   stage: deploy
 #   script:
