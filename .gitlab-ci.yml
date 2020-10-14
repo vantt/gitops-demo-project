@@ -19,8 +19,14 @@ build_image:
   stage: preparation
   image: gitlab/dind # use gitlab dind to have docker command
   script:
-    - cd build/ci && docker build -t registry.miczone.asia/devops/demoapp:1.1.1 .
-    - docker push registry.miczone.asia/devops/demoapp:1.1.1 
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - cd build/ci && docker build -t demoapp .
+    - export TAG=$(echo $CI_COMMIT_SHA | cut -c 1-7)
+    - docker tag demoapp:latest $CI_REGISTRY/devops/demoapp:$TAG
+    - docker tag demoapp:latest $CI_REGISTRY/devops/demoapp:$CI_COMMIT_REF_NAME
+    - docker push $CI_REGISTRY/devops/demoapp:$TAG
+    - docker push $CI_REGISTRY/devops/demoapp:$CI_COMMIT_REF_NAME
+
 
 list-files:
   stage: preparation
