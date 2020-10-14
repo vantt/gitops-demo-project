@@ -16,6 +16,7 @@ stages:
 
 list-files:
   stage: preparation
+  image: registry.miczone.asia/devops/phpcli:7.4.11
   script:
     - pwd
     - ls -a
