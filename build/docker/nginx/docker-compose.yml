@@ -12,7 +12,9 @@ networks:
         name: https-proxy
 
 volumes:
+    #    # named volume with host mounted directory
     #    # this is for Native Linux (Ubuntu)
+    #    # PROJECT_FOLDER must be an absolute path 
     #    appVolume:
     #        driver: local
     #        driver_opts:
