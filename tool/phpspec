@@ -1,0 +1,6 @@
+#!/bin/bash
+
+DOCKER_IMAGE=devops/phpspec:6.1.1
+
+source "$(dirname "$(realpath "$0")")"/rundocker
+rundocker "$@"

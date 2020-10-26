@@ -1,0 +1,123 @@
+image: laradock/workspace:latest-7.4
+
+cache: &global_cache
+  # https://docs.gitlab.com/ee/ci/caching/#sharing-caches-across-the-same-branch
+  # jobs of each branch always use the same cache
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - code/node_modules/
+    - code/vendor/
+  #policy: pull-push
+
+stages:
+  - preparation
+  - testing
+  - security
+  - quality
+  - package
+
+list-files:
+  stage: preparation
+  script:
+    - pwd    
+    - ls -a
+
+build_docker_image:
+  stage: preparation
+  image: gitlab/dind # use gitlab dind to have docker command
+  dependencies:
+      - list-files
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t demoapp -f build/ci/Dockerfile .
+    - export TAG=$(echo $CI_COMMIT_SHA | cut -c 1-7)
+    - docker tag demoapp:latest $CI_REGISTRY/devops/demoapp:$TAG
+    - docker tag demoapp:latest $CI_REGISTRY/devops/demoapp:$CI_COMMIT_REF_NAME
+    - docker push $CI_REGISTRY/devops/demoapp:$TAG
+    - docker push $CI_REGISTRY/devops/demoapp:$CI_COMMIT_REF_NAME
+    - echo "Sucessful push $CI_REGISTRY/devops/demoapp:$TAG $CI_REGISTRY/devops/demoapp:$CI_COMMIT_REF_NAME"
+
+composer:
+  stage: preparation
+  image: composer:1.10
+  script:
+    - php -v
+    - cd code && composer install --prefer-dist --no-ansi --no-interaction --no-progress --no-scripts
+  cache:
+    # inherit all global cache settings
+    <<: *global_cache
+
+  artifacts:
+      untracked: false
+      expire_in: 30 days     
+      paths:
+          - code
+
+unit_test:
+  stage: testing
+  dependencies:
+    - composer
+  script:
+    - php -v
+    #- sudo cp /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.bak
+    - cd code
+    - ./bin/phpunit --version
+    - ./bin/phpunit
+    #- sudo cp /usr/local/etc/php/conf.d/docker-php-ext-xdebug.bak /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+
+
+sensiolabs:
+  stage: security
+  script:
+    - test -d security-checker || git clone https://github.com/sensiolabs/security-checker.git
+    - cd security-checker
+    - composer install
+    - php security-checker security:check ../code/composer.lock
+  dependencies: []
+  cache:
+    paths:
+      - security-checker/
+  
+
+# codestyle:
+#   stage: quality
+#   #image: lorisleiva/laravel-docker
+#   script:
+#     - phpcs --extensions=php code
+#   dependencies: []
+
+# copypaste:
+#   stage: quality
+#   script:
+#     - test -f phpcpd.phar || curl -L https://phar.phpunit.de/phpcpd.phar -o phpcpd.phar
+#     - php phpcpd.phar code/ --min-lines=50
+#   dependencies: []
+#   cache:
+#     paths:
+#       - phpcpd.phar
+
+# deploy_production:
+#   stage: deploy
+#   script:
+#     - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+#     - eval $(ssh-agent -s)
+#     - ssh-add <(echo "$SSH_PRIVATE_KEY")
+#     - mkdir -p ~/.ssh
+#     - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+
+#     - ~/.composer/vendor/bin/envoy run deploy --commit="$CI_COMMIT_SHA"
+#   environment:
+#     name: production
+#     url: http://192.168.1.1
+#   when: manual
+#   only:
+#     - master      
+
+# docker build:
+#   script: docker build -t my-image:$CI_COMMIT_REF_SLUG .
+# only:
+#     refs:
+#       - merge_requests
+#     changes:
+#       - Dockerfile
+#       - service-one/**/*
