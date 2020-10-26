@@ -19,8 +19,13 @@ volumes:
     #        driver: local
     #        driver_opts:
     #            type: none
-    #            device: ${PROJECT_FOLDER}
+    #            device: $PWD/${PROJECT_FOLDER}
     #            o: bind
+
+    # máu nữa thì dùng cái này cho Linux thôi
+    #
+    # https://github.com/MatchbookLab/local-persist
+    #
 
     # this is for MacOS
     #
