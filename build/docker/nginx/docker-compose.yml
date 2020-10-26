@@ -16,7 +16,7 @@ volumes:
     #    appVolume:
     #        driver: local
     #        driver_opts:
-    #            type: bind
+    #            type: none
     #            device: ${PROJECT_FOLDER}
     #            o: bind
 
