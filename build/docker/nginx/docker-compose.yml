@@ -21,12 +21,18 @@ volumes:
     #            o: bind
 
     # this is for MacOS
+    #
+    # correct absolute folder on MacOS for project folder:
+    #    /System/Volumes/Data/$PWD/${PROJECT_FOLDER}
+    #  ~ /System/Volumes/Data/Users/vantt/sub/path-to-project/${PROJECT_FOLDER}" 
+    #    
+    #    where $PWD ~ Users/vantt/sub/path-to-project
     demoProductVolume:
         driver: local
         driver_opts:
             type: nfs
             o: addr=host.docker.internal,rw,nolock,hard,nointr,nfsvers=3
-            device: ":/System/Volumes/Data/$PWD/${PROJECT_FOLDER}"
+            device: ":/System/Volumes/Data/$PWD/${PROJECT_FOLDER}" 
 
 services:
     php:
