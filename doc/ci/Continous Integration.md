@@ -213,7 +213,7 @@ https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#define-an-image-fr
 Create an environment vaairriable ưith the name: *DOCKER_AUTH_CONFIG*
 
 
-Note: *Protected Variable* may make your variable will not be expose to the runner, please disabled that attribute.
+**Note: *Protected Variable* may make your variable will not be expose to the runner, please disabled that attribute.**
  
 ```
 # The use of "-n" - prevents encoding a newline in the password.
