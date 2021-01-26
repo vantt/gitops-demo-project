@@ -1,0 +1,17 @@
+{
+    debug
+
+    # prometheus must be run first   
+    order prometheus first
+}
+
+:80 {
+    root * /app/public
+    php_fastcgi /* php:9000
+
+    prometheus {     
+        address 0.0.0.0:2081
+        path    /metrics
+        label route_name {>route-name}
+    }
+}
