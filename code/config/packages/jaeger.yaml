@@ -1,0 +1,197 @@
+parameters:
+    service_name: app
+    env(JAEGER_HOST): localhost
+    env(JAEGER_PORT): '6832'
+    env(JAEGER_BUFFER_SIZE): '32768'
+    env(JAEGER_SAMPLER_TYPE): adaptive
+    env(JAEGER_SAMPLER_PARAM): '0.001'
+    env(JAEGER_CONTEXT_FORMAT): 'text'
+    env(JAEGER_CONTEXT_ENV): 'UBER_TRACE_ID'
+    env(JAEGER_CONTEXT_HEADER): 'uber-trace-id'
+    env(JAEGER_DEBUG_ENV): 'debug'
+    env(JAEGER_DEBUG_COOKIE): 'debug'
+    env(JAEGER_SERVICE_NAME): '%service_name%'
+    env(JAEGER_SPAN_BATCH): '16'
+services:
+    spl.stack:
+        class: SplStack
+        shared: false
+    spl.priority.queue:
+        class: SplPriorityQueue
+        shared: false
+    id.generator.random:
+        class: Jaeger\Id\RandomIntGenerator
+    id.generator.span: '@id.generator.random'
+    jaeger.codec.text:
+        class: Jaeger\Codec\TextCodec
+        tags:
+            - {name: 'jaeger.codec', alias: 'text'}
+    jaeger.codec.registry:
+        class: Jaeger\Codec\CodecRegistry
+        calls:
+            -
+                method: offsetSet
+                arguments: ['text', '@jaeger.codec.text']
+    jaeger.sampler.factory:
+        class: Jaeger\Symfony\Bridge\JaegerSamplerFactory
+    jaeger.sampler:
+        class: Jaeger\Sampler\SamplerInterface
+        factory: ['@jaeger.sampler.factory', 'sampler']
+        arguments: ['%env(JAEGER_SAMPLER_TYPE)%', '%env(JAEGER_SAMPLER_PARAM)%']
+    jaeger.span.factory:
+        class: Jaeger\Span\Factory\SpanFactory
+        arguments: ['@id.generator.span', '@jaeger.sampler']
+    client.thrift:
+        class: Jaeger\Client\ThriftClient
+        arguments: ['%env(JAEGER_SERVICE_NAME)%', '@thrift.agent', '%env(JAEGER_SPAN_BATCH)%']
+    thrift.agent:
+        class: Jaeger\Thrift\Agent\AgentClient
+        arguments: ['@thrift.protocol']
+    thrift.protocol.compact:
+        class: Thrift\Protocol\TCompactProtocol
+        arguments: ['@thrift.transport']
+    thrift.protocol.binary:
+        class: Thrift\Protocol\TBinaryProtocol
+        arguments: ['@thrift.transport']
+    thrift.protocol: '@thrift.protocol.binary'
+    thrift.transport.udp:
+        class: Jaeger\Symfony\Transport\SymfonyUDPTransport
+        arguments: ['%env(JAEGER_HOST)%', '%env(JAEGER_PORT)%']
+    thrift.transport.buffered:
+        class: Jaeger\Symfony\Transport\SymfonyBufferedTransport
+        arguments: ['@thrift.transport.udp', '%env(JAEGER_BUFFER_SIZE)%', '%env(JAEGER_BUFFER_SIZE)%']
+        calls:
+            -
+                method: open
+                arguments: []
+    thrift.transport: '@thrift.transport.udp'
+    jaeger.span.manager.stack:
+        class: Jaeger\Span\StackSpanManager
+    jaeger.span.manager: '@jaeger.span.manager.stack'
+    jaeger.context.manager: '@jaeger.span.manager'
+    jaeger.tracer.abstract:
+        class: Jaeger\Tracer\Tracer
+        abstract: true
+        arguments:
+            - '@jaeger.span.manager'
+            - '@jaeger.span.factory'
+            - '@client.thrift'
+    jaeger.tracer:
+        class: Jaeger\Tracer\Tracer
+        parent: jaeger.tracer.abstract
+    jaeger.debuggable: '@jaeger.tracer'
+    jaeger.flushable: '@jaeger.tracer'
+    jaeger.context.extractor.env:
+        class: Jaeger\Symfony\Context\Extractor\EnvContextExtractor
+        arguments:
+            - '@jaeger.codec.registry'
+            - '%env(JAEGER_CONTEXT_FORMAT)%'
+            - '%env(JAEGER_CONTEXT_ENV)%'
+        tags:
+            - {name: 'kernel.event_subscriber' }
+            - {name: 'jaeger.context.extractor'}
+    jaeger.context.extractor.header:
+        class: Jaeger\Symfony\Context\Extractor\HeaderContextExtractor
+        arguments:
+            - '@jaeger.codec.registry'
+            - '%env(JAEGER_CONTEXT_FORMAT)%'
+            - '%env(JAEGER_CONTEXT_HEADER)%'
+        tags:
+            - {name: 'kernel.event_subscriber' }
+            - {name: 'jaeger.context.extractor'}
+    jaeger.context.extractor.chain:
+        class: Jaeger\Symfony\Context\Extractor\ContextExtractorChain
+        arguments:
+            - '@spl.priority.queue'
+    jaeger.context.extractor:
+        alias: 'jaeger.context.extractor.chain'
+    jaeger.debug.extractor.env:
+        class: Jaeger\Symfony\Debug\Extractor\EnvDebugExtractor
+        arguments:
+            - '%env(JAEGER_DEBUG_ENV)%'
+        tags:
+            - {name: 'kernel.event_subscriber' }
+            - {name: 'jaeger.debug.extractor'}
+    jaeger.debug.extractor.cookie:
+        class: Jaeger\Symfony\Debug\Extractor\CookieDebugExtractor
+        arguments:
+            - '%env(JAEGER_DEBUG_COOKIE)%'
+        tags:
+            - {name: 'kernel.event_subscriber' }
+            - {name: 'jaeger.debug.extractor'}
+    jaeger.debug.extractor.chain:
+        class: Jaeger\Symfony\Debug\Extractor\DebugExtractorChain
+        arguments:
+            - '@spl.priority.queue'
+    jaeger.debug.extractor:
+        alias: 'jaeger.debug.extractor.chain'
+    jaeger.name.generator.default:
+        class: Jaeger\Symfony\Name\Generator\DefaultNameGenerator
+        tags:
+            - {name: 'kernel.event_subscriber' }
+            - {name: 'jaeger.name.generator', priority: -1}
+    jaeger.name.generator.chain:
+        class: Jaeger\Symfony\Name\Generator\NameGeneratorChain
+        arguments:
+            - '@spl.priority.queue'
+    jaeger.name.generator:
+        alias: 'jaeger.name.generator.chain'
+    jaeger.span.handler.background:
+        class: Jaeger\Symfony\Bridge\BackgroundSpanHandler
+        arguments: ['@jaeger.tracer']
+    jaeger.span.handler.gloabal:
+        class: Jaeger\Symfony\Bridge\GlobalSpanHandler
+        arguments: ['@jaeger.tracer', '@jaeger.name.generator']
+    jaeger.debug.listener:
+        class: Jaeger\Symfony\Bridge\DebugListener
+        arguments:
+            - '@jaeger.debuggable'
+            - '@jaeger.debug.extractor'
+        tags:
+            - {name: 'kernel.event_subscriber' }
+    jaeger.context.listener:
+        class: Jaeger\Symfony\Bridge\ContextListener
+        arguments:
+            - '@jaeger.span.manager'
+            - '@jaeger.context.extractor'
+        tags:
+            - {name: 'kernel.event_subscriber' }
+    jaeger.request.span.listener:
+        class: Jaeger\Symfony\Bridge\RequestSpanListener
+        arguments:
+            - '@spl.stack'
+            - '@jaeger.name.generator'
+            - '@jaeger.tracer'
+        tags:
+            - {name: 'kernel.event_subscriber' }
+    jaeger.global.span.listener:
+        class: Jaeger\Symfony\Bridge\GlobalSpanListener
+        arguments: ['@jaeger.span.handler.gloabal']
+        tags:
+            - {name: 'kernel.event_subscriber' }
+    jaeger.app.start.listener:
+        class: Jaeger\Symfony\Bridge\AppStartSpanListener
+        arguments: ['@jaeger.tracer']
+        tags:
+            - {name: 'kernel.event_subscriber' }
+    jaeger.tracer.bridge.symfony:
+        class: Jaeger\Symfony\Bridge\TracerBridge
+        arguments: ['@jaeger.flushable']
+        tags:
+            - {name: 'kernel.event_subscriber' }
+    jaeger.span.background.listener.start:
+        class: Jaeger\Symfony\Bridge\BackgroundStartListener
+        arguments: ['@jaeger.span.handler.background']
+        tags:
+            - {name: 'kernel.event_subscriber' }
+    jaeger.span.handler.listener.flush:
+        class: Jaeger\Symfony\Bridge\HandlerFlushListener
+        arguments: ['@jaeger.span.handler.background', '@jaeger.span.handler.gloabal']
+        tags:
+            - {name: 'kernel.event_subscriber' }
+    jaeger.exception.listener:
+        class: Jaeger\Symfony\Bridge\ExceptionListener
+        arguments:
+            - '@jaeger.span.manager'
+        tags:
+            - {name: 'kernel.event_subscriber'}

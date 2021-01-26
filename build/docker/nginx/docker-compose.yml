@@ -12,15 +12,15 @@ networks:
         name: https-proxy
 
 volumes:
-    #    # named volume with host mounted directory
-    #    # this is for Native Linux (Ubuntu)
-    #    # PROJECT_FOLDER must be an absolute path 
-    #    appVolume:
-    #        driver: local
-    #        driver_opts:
-    #            type: none
-    #            device: $PWD/${PROJECT_FOLDER}
-    #            o: bind
+    # named volume with host mounted directory
+    # this is for Native Linux (Ubuntu)
+    # PROJECT_FOLDER must be an absolute path 
+    appVolume:
+        driver: local
+        driver_opts:
+            type: none
+            device: $PWD/${PROJECT_FOLDER}
+            o: bind
 
     # máu nữa thì dùng cái này cho Linux thôi
     #
@@ -34,32 +34,36 @@ volumes:
     #  ~ /System/Volumes/Data/Users/vantt/sub/path-to-project/${PROJECT_FOLDER}" 
     #    
     #    where $PWD ~ Users/vantt/sub/path-to-project
-    demoProductVolume:
-        driver: local
-        driver_opts:
-            type: nfs
-            o: addr=host.docker.internal,rw,nolock,hard,nointr,nfsvers=3
-            device: ":/System/Volumes/Data/$PWD/${PROJECT_FOLDER}" 
+    # demoProductVolume:
+    #     driver: local
+    #     driver_opts:
+    #         type: nfs
+    #         o: addr=host.docker.internal,rw,nolock,hard,nointr,nfsvers=3
+    #         device: ":/System/Volumes/Data/$PWD/${PROJECT_FOLDER}" 
 
 services:
     php:
         #build: http://git.c
         image: registry.miczone.asia/devops/phpfpm:7.4
         volumes:
-            - demoProductVolume:/app
+            - appVolume:/app
+        environment: 
+          - JAEGER_HOST=jaeger
+          - JAEGER_PORT=6831
         networks:
             default: {}
+            front-proxy: {}
 
     nginx:
         #build: http://git.c
         image: registry.miczone.asia/devops/nginx:1.19.3
-        ports:
-            - 8080:8080 # dont need to expose here since traefik will do forwarding
+        # ports:
+        #     - 8000:8000 # dont need to expose here since traefik will do forwarding
         depends_on:
             - php
         volumes:
             - ./nginx-vhost.conf:/etc/nginx/conf.d/localhost.conf
-            - demoProductVolume:/app
+            - appVolume:/app
         networks:
             front-proxy: {}     # road runner will communicate with the world (expose) through this network
             default: {}   # it will communicate with other internal services here
@@ -67,7 +71,7 @@ services:
             # https://docs.traefik.io/reference/dynamic-configuration/docker/
             # https://docs.traefik.io/routing/providers/docker/
             - traefik.enable=true # expose this container through traefik
-            - traefik.http.services.demoProduct.loadbalancer.server.port=8080
+            - traefik.http.services.demoProduct2.loadbalancer.server.port=8080
 
             # http route, redirect to https
             # - traefik.http.routers.demoProduct_http.entrypoints=http
@@ -75,7 +79,7 @@ services:
             # - traefik.http.routers.demoProduct_http.middlewares=force-https@file
 
             # https route
-            - traefik.http.routers.demoProduct_https.entrypoints=https
-            - traefik.http.routers.demoProduct_https.rule=Host(`demo.dev.mz`)
-            - traefik.http.routers.demoProduct_https.tls=true
-            - traefik.http.routers.demoProduct_https.service=demoProduct
+            - traefik.http.routers.demoProduct2_https.entrypoints=https
+            - traefik.http.routers.demoProduct2_https.rule=Host(`demo2.dev.mz`)
+            - traefik.http.routers.demoProduct2_https.tls=true
+            - traefik.http.routers.demoProduct2_https.service=demoProduct2
